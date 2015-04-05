@@ -17,6 +17,11 @@ define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
             template.before('table').insert('<textarea class="ko-grid-focus-parking" tabIndex="-1" style="position: absolute; z-index: 10; overflow: hidden; box-sizing: border-box; width: 1em; height: 1em; top: -3em; left: -3em; resize: none; border: none;"></textarea>');
         },
         Constructor: function CellNavigationExtension(bindingValue, config, grid) {
+            var onCellFocusedHandlers = [];
+
+            this.onCellFocused = handler => onCellFocusedHandlers.push(handler);
+            this['onCellFocused'] = this.onCellFocused;
+
             var scroller = null, focusParking = null,
                 selectedRow = null, selectedColumn = null,
                 hijacked = null;
@@ -26,10 +31,10 @@ define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
                 focusParking = grid.element.querySelector('.ko-grid-focus-parking');
             });
 
-            grid.data.onCellClick((e, cellValue, row, column) => select(row, column));
+            grid.data.onCellClick((e, cellValue, row, column) => focus(row, column));
 
-            grid.rootElement.addEventListener('keydown', e => {
-                if (KEY_CODES.indexOf(e.keyCode) < 0)
+            grid.onKeyDown(e => {
+                if (e.defaultPrevented || KEY_CODES.indexOf(e.keyCode) < 0)
                     return;
 
                 e.preventDefault();
@@ -78,23 +83,37 @@ define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
                 newColIndex = Math.max(0, Math.min(cols.length - 1, newColIndex));
                 newRowIndex = Math.max(0, Math.min(rows.length - 1, newRowIndex));
 
-                select(rows.get(newRowIndex), cols[newColIndex]);
+                focus(rows.get(newRowIndex), cols[newColIndex]);
             }
 
-            function select(row, column) {
+            function focus(row, column) {
+                if (row === selectedRow && column === selectedColumn)
+                    return;
                 if (hijacked)
                     hijacked.release();
 
-                selectedRow = row;
-                selectedColumn = column;
                 var cell = grid.data.lookupCell(row, column);
-                hijacked = cell.hijack('focused');
-
-                scrollIntoView(cell.element);
 
                 focusParking.focus();
                 focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
                 focusParking.setSelectionRange(0, focusParking.value.length);
+
+                hijacked = cell.hijack(b => {
+                    return onCellFocusedHandlers.reduce((a, h) => h(row, column, a) || a, {
+                        init: function (element, row, column) {
+                            selectedRow = row;
+                            selectedColumn = column;
+                            b.init.apply(this, arguments);
+                            element.classList.add('focused');
+                        },
+                        update: function (element) {
+                            b.update.apply(this, arguments);
+                            element.classList.add('focused');
+                        }
+                    });
+                });
+
+                scrollIntoView(cell.element);
             }
 
             // TODO scroll containing view port if necessary

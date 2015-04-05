@@ -1,1 +1,1 @@
-.focused.ko-grid-cell{outline:#000 solid 2.5px;outline-offset:-1px;background-color:#c4ddf3}
+.focused.ko-grid-cell{position:relative;outline:#000 solid 2px;overflow:hidden;background-color:#c4ddf3}

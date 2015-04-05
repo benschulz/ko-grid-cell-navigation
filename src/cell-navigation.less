@@ -3,7 +3,8 @@
 @selected-cell-background-color: lighten(@primary-color, 30%);
 
 .focused.ko-grid-cell {
-  outline: 2.5px solid black;
-  outline-offset: -1px;
+  position: relative;
+  outline: 2px solid black;
+  overflow: hidden;
   background-color: @selected-cell-background-color;
 }

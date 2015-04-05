@@ -1,5 +1,3 @@
-
-
 /** @namespace */
 de.benshu.ko.grid.extensions.cellNavigation = {};
 
