@@ -87,12 +87,26 @@ define(['module', 'knockout', 'onefold-dom', 'ko-grid'], function (module, ko, d
             }
 
             function focus(row, column) {
-                if (row === selectedRow && column === selectedColumn)
-                    return;
+                var cell = grid.data.lookupCell(row, column);
+                if (row !== selectedRow || column !== selectedColumn)
+                    hijack(row, column, cell);
+
+                if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
+                    var focussable = cell.element.querySelector('input, select, textarea');
+                    if (!focussable) {
+                        focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
+                        focusParking.setSelectionRange(0, focusParking.value.length);
+                        focussable = focusParking;
+                    }
+                    focussable.focus();
+                }
+
+                scrollIntoView(cell.element);
+            }
+
+            function hijack(row, column, cell) {
                 if (hijacked)
                     hijacked.release();
-
-                var cell = grid.data.lookupCell(row, column);
 
                 hijacked = cell.hijack(b => {
                     return onCellFocusedHandlers.reduce((a, h) => h(row, column, a) || a, {
@@ -108,18 +122,6 @@ define(['module', 'knockout', 'onefold-dom', 'ko-grid'], function (module, ko, d
                         }
                     });
                 });
-
-                if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
-                    var focussable = cell.element.querySelector('input, select, textarea');
-                    if (!focussable) {
-                        focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
-                        focusParking.setSelectionRange(0, focusParking.value.length);
-                        focussable = focusParking;
-                    }
-                    focussable.focus();
-                }
-
-                scrollIntoView(cell.element);
             }
 
             // TODO scroll containing view port if necessary

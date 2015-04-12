@@ -79,11 +79,23 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, dom, koGrid) {
         focus(rows.get(newRowIndex), cols[newColIndex]);
       }
       function focus(row, column) {
-        if (row === selectedRow && column === selectedColumn)
-          return;
+        var cell = grid.data.lookupCell(row, column);
+        if (row !== selectedRow || column !== selectedColumn)
+          hijack(row, column, cell);
+        if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
+          var focussable = cell.element.querySelector('input, select, textarea');
+          if (!focussable) {
+            focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
+            focusParking.setSelectionRange(0, focusParking.value.length);
+            focussable = focusParking;
+          }
+          focussable.focus();
+        }
+        scrollIntoView(cell.element);
+      }
+      function hijack(row, column, cell) {
         if (hijacked)
           hijacked.release();
-        var cell = grid.data.lookupCell(row, column);
         hijacked = cell.hijack(function (b) {
           return onCellFocusedHandlers.reduce(function (a, h) {
             return h(row, column, a) || a;
@@ -102,16 +114,6 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, dom, koGrid) {
             }
           });
         });
-        if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
-          var focussable = cell.element.querySelector('input, select, textarea');
-          if (!focussable) {
-            focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
-            focusParking.setSelectionRange(0, focusParking.value.length);
-            focussable = focusParking;
-          }
-          focussable.focus();
-        }
-        scrollIntoView(cell.element);
       }
       // TODO scroll containing view port if necessary
       function scrollIntoView(element) {
