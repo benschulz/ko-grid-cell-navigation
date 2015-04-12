@@ -1,6 +1,6 @@
 'use strict';
 
-define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
+define(['module', 'knockout', 'onefold-dom', 'ko-grid'], function (module, ko, dom, koGrid) {
     var extensionId = module.id.indexOf('/') < 0 ? module.id : module.id.substring(0, module.id.indexOf('/'));
 
     var KEY_CODE_ARROW_UP = 38,
@@ -94,10 +94,6 @@ define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
 
                 var cell = grid.data.lookupCell(row, column);
 
-                focusParking.focus();
-                focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
-                focusParking.setSelectionRange(0, focusParking.value.length);
-
                 hijacked = cell.hijack(b => {
                     return onCellFocusedHandlers.reduce((a, h) => h(row, column, a) || a, {
                         init: function (element, row, column) {
@@ -113,6 +109,16 @@ define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
                     });
                 });
 
+                if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
+                    var focussable = cell.element.querySelector('input, select, textarea');
+                    if (!focussable) {
+                        focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
+                        focusParking.setSelectionRange(0, focusParking.value.length);
+                        focussable = focusParking;
+                    }
+                    focussable.focus();
+                }
+
                 scrollIntoView(cell.element);
             }
 
@@ -126,7 +132,7 @@ define(['module', 'knockout', 'ko-grid'], function (module, ko, koGrid) {
                 var scrollX = Math.min(0, elementBounds.left - scrollerBounds.left - extra)
                     || Math.max(0, elementBounds.right - scrollerBounds.right + extra + (scroller.offsetWidth - scroller.clientWidth));
                 var scrollY = Math.min(0, elementBounds.top - scrollerBounds.top - extra)
-                    || Math.max(0, elementBounds.bottom - scrollerBounds.bottom + extra);
+                    || Math.max(0, elementBounds.bottom - scrollerBounds.bottom + extra + (scroller.offsetHeight - scroller.clientHeight));
 
                 scroller.scrollLeft += scrollX;
                 scroller.scrollTop += scrollY;

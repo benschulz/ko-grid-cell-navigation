@@ -8,9 +8,58 @@
     else
         window['ko-grid-cell-navigation'] = factory(window.ko.bindingHandlers['grid'], window.ko);
 } (function(ko_grid, knockout) {
-var ko_grid_cell_navigation_cell_navigation, ko_grid_cell_navigation;
+/*
+ * Copyright (c) 2015, Ben Schulz
+ * License: BSD 3-clause (http://opensource.org/licenses/BSD-3-Clause)
+ */
+var onefold_dom, ko_grid_cell_navigation_cell_navigation, ko_grid_cell_navigation;
+onefold_dom = function () {
+  var onefold_dom_internal, onefold_dom;
+  onefold_dom_internal = function () {
+    function strictlyContains(container, node) {
+      return !!(container.compareDocumentPosition(node) & 16);
+    }
+    function determineDepth(root, node) {
+      var depth = 0;
+      while (node) {
+        if (node === root)
+          return depth;
+        node = node.parentNode;
+        ++depth;
+      }
+      throw new Error('The given node is not part of the subtree.');
+    }
+    var Element = window.Element;
+    var matches = Element.prototype.webkitMatchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.matches;
+    function closest(element, selector) {
+      do {
+        if (matches.call(element, selector))
+          return element;
+        element = element.parentElement;
+      } while (element);
+      return null;
+    }
+    return {
+      determineDepth: determineDepth,
+      isOrContains: function (container, node) {
+        return container === node || strictlyContains(container, node);
+      },
+      strictlyContains: strictlyContains,
+      element: {
+        closest: closest,
+        matches: function (element, selector) {
+          return matches.call(element, selector);
+        }
+      }
+    };
+  }();
+  onefold_dom = function (main) {
+    return main;
+  }(onefold_dom_internal);
+  return onefold_dom;
+}();
 
-ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
+ko_grid_cell_navigation_cell_navigation = function (module, ko, dom, koGrid) {
   var extensionId = 'ko-grid-cell-navigation'.indexOf('/') < 0 ? 'ko-grid-cell-navigation' : 'ko-grid-cell-navigation'.substring(0, 'ko-grid-cell-navigation'.indexOf('/'));
   var KEY_CODE_ARROW_UP = 38, KEY_CODE_ARROW_LEFT = 37, KEY_CODE_ARROW_RIGHT = 39, KEY_CODE_ARROW_DOWN = 40, KEY_CODE_TAB = 9, KEY_CODE_ENTER = 13;
   var KEY_CODES = [
@@ -89,9 +138,6 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
         if (hijacked)
           hijacked.release();
         var cell = grid.data.lookupCell(row, column);
-        focusParking.focus();
-        focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
-        focusParking.setSelectionRange(0, focusParking.value.length);
         hijacked = cell.hijack(function (b) {
           return onCellFocusedHandlers.reduce(function (a, h) {
             return h(row, column, a) || a;
@@ -110,6 +156,15 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
             }
           });
         });
+        if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
+          var focussable = cell.element.querySelector('input, select, textarea');
+          if (!focussable) {
+            focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
+            focusParking.setSelectionRange(0, focusParking.value.length);
+            focussable = focusParking;
+          }
+          focussable.focus();
+        }
         scrollIntoView(cell.element);
       }
       // TODO scroll containing view port if necessary
@@ -118,14 +173,14 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
         var elementBounds = element.getBoundingClientRect();
         var extra = 7;
         var scrollX = Math.min(0, elementBounds.left - scrollerBounds.left - extra) || Math.max(0, elementBounds.right - scrollerBounds.right + extra + (scroller.offsetWidth - scroller.clientWidth));
-        var scrollY = Math.min(0, elementBounds.top - scrollerBounds.top - extra) || Math.max(0, elementBounds.bottom - scrollerBounds.bottom + extra);
+        var scrollY = Math.min(0, elementBounds.top - scrollerBounds.top - extra) || Math.max(0, elementBounds.bottom - scrollerBounds.bottom + extra + (scroller.offsetHeight - scroller.clientHeight));
         scroller.scrollLeft += scrollX;
         scroller.scrollTop += scrollY;
       }
     }
   });
   return koGrid.declareExtensionAlias('cellNavigation', extensionId);
-}({}, knockout, ko_grid);
+}({}, knockout, onefold_dom, ko_grid);
 ko_grid_cell_navigation = function (main) {
   return main;
 }(ko_grid_cell_navigation_cell_navigation);return ko_grid_cell_navigation;

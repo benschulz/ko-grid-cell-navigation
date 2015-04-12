@@ -15,5 +15,8 @@
   "dependencies": {
     "knockout": "^3.3.0",
     "ko-grid": "benschulz/ko-grid"
+  },
+  "devDependencies": {
+    "onefold-dom": "benschulz/onefold-dom"
   }
 }

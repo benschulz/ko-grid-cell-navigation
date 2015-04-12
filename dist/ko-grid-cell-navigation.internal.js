@@ -5,7 +5,7 @@
 define(['onefold-dom', 'indexed-list', 'stringifyable', 'onefold-lists', 'onefold-js', 'ko-grid', 'ko-data-source', 'ko-indexed-repeat', 'knockout'],    function(onefold_dom, indexed_list, stringifyable, onefold_lists, onefold_js, ko_grid, ko_data_source, ko_indexed_repeat, knockout) {
 var ko_grid_cell_navigation_cell_navigation, ko_grid_cell_navigation;
 
-ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
+ko_grid_cell_navigation_cell_navigation = function (module, ko, dom, koGrid) {
   var extensionId = 'ko-grid-cell-navigation'.indexOf('/') < 0 ? 'ko-grid-cell-navigation' : 'ko-grid-cell-navigation'.substring(0, 'ko-grid-cell-navigation'.indexOf('/'));
   var KEY_CODE_ARROW_UP = 38, KEY_CODE_ARROW_LEFT = 37, KEY_CODE_ARROW_RIGHT = 39, KEY_CODE_ARROW_DOWN = 40, KEY_CODE_TAB = 9, KEY_CODE_ENTER = 13;
   var KEY_CODES = [
@@ -84,9 +84,6 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
         if (hijacked)
           hijacked.release();
         var cell = grid.data.lookupCell(row, column);
-        focusParking.focus();
-        focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
-        focusParking.setSelectionRange(0, focusParking.value.length);
         hijacked = cell.hijack(function (b) {
           return onCellFocusedHandlers.reduce(function (a, h) {
             return h(row, column, a) || a;
@@ -105,6 +102,15 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
             }
           });
         });
+        if (!dom.isOrContains(grid.rootElement, window.document.activeElement)) {
+          var focussable = cell.element.querySelector('input, select, textarea');
+          if (!focussable) {
+            focusParking.value = column.renderValue(ko.unwrap(row[column.property]));
+            focusParking.setSelectionRange(0, focusParking.value.length);
+            focussable = focusParking;
+          }
+          focussable.focus();
+        }
         scrollIntoView(cell.element);
       }
       // TODO scroll containing view port if necessary
@@ -113,14 +119,14 @@ ko_grid_cell_navigation_cell_navigation = function (module, ko, koGrid) {
         var elementBounds = element.getBoundingClientRect();
         var extra = 7;
         var scrollX = Math.min(0, elementBounds.left - scrollerBounds.left - extra) || Math.max(0, elementBounds.right - scrollerBounds.right + extra + (scroller.offsetWidth - scroller.clientWidth));
-        var scrollY = Math.min(0, elementBounds.top - scrollerBounds.top - extra) || Math.max(0, elementBounds.bottom - scrollerBounds.bottom + extra);
+        var scrollY = Math.min(0, elementBounds.top - scrollerBounds.top - extra) || Math.max(0, elementBounds.bottom - scrollerBounds.bottom + extra + (scroller.offsetHeight - scroller.clientHeight));
         scroller.scrollLeft += scrollX;
         scroller.scrollTop += scrollY;
       }
     }
   });
   return koGrid.declareExtensionAlias('cellNavigation', extensionId);
-}({}, knockout, ko_grid);
+}({}, knockout, onefold_dom, ko_grid);
 ko_grid_cell_navigation = function (main) {
   return main;
 }(ko_grid_cell_navigation_cell_navigation);return ko_grid_cell_navigation;
